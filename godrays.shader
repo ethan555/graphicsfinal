@@ -67,6 +67,7 @@ void main( void ) {
     float value = 2.*pow(6.*pow(.5 + gradient_octaves(vec3(position.x+position.y/2., position.x+position.y/2., t))*.5, 6.), 2.);
     vec3 color_dist = vec3(1., .84, .5);
     color.rgb = color_dist * vec3(value);
+    color.a = value;
 
     gl_FragColor = color;
 

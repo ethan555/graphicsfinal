@@ -29,15 +29,6 @@ vec3 random3(vec3 st){
     return -1.0 + 2.0*fract(sin(st)*43758.5453123);
 }
 
-vec3 hash( vec3 p ) // replace this by something better
-{
-    p = vec3( dot(p,vec3(127.1,311.7, 74.7)),
-        dot(p,vec3(269.5,183.3,246.1)),
-        dot(p,vec3(113.5,271.9,124.6)));
-
-    return -1.0 + 2.0*fract(sin(p)*43758.5453123);
-}
-
 float gradient(vec3 st) {
     vec3 i = floor(st);
     vec3 f = fract(st);
@@ -69,15 +60,16 @@ float gradient_octaves(vec3 st) {
 
 void main( void ) {
 
-    vec2 position = gl_FragCoord.xy / resolution.x * 2.;// / resolution.xy;
+    vec2 position = gl_FragCoord.xy / resolution.xy * 2.;// / resolution.xy;
 
     vec4 color = vec4(0., 0., 0., 0.);
     float t = mod(time*0.15, 10000.);
     float t2 = mod(time*0.025, 10000.);
-    vec3 randposition = vec3(position.x*t+t*position.y/2., position.x*t+t+t*position.y/8., t);
-    float value = 2.*pow(6.*pow(.5 + gradient_octaves(randposition)*.5, 6.), 2.);
-    vec3 color_dist = vec3(1., .84, .5);
-    color.rgb = color_dist * vec3(value, value, value);
+    vec3 randposition = vec3(position.x+t+t*position.y/2., position.x*t+t+position.y/8., t);
+    float value = 4.*pow(6.*pow(.5 + gradient_octaves(randposition)*.5, 6.), 2.);
+    float value2 = 4.*pow(6.*pow(.5 + gradient_octaves(vec3(randposition.xy*2.,randposition.z))*.5, 6.), 2.);
+    vec3 color_dist = vec3(0.35, .5, 1.);
+    color.rgb = color_dist * mix(vec3(pow(value, 2.), pow(value, 4.), value),vec3(value2, pow(value2, 4.), value2),.5);
 
     gl_FragColor = color;
 

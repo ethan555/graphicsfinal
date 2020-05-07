@@ -1,12 +1,35 @@
-#ifdef GL_ES
-precision mediump float;
-#endif
+/**
+* Example Vertex Shader
+* Sets the position of the vertex by setting gl_Position
+*/
 
-#extension GL_OES_standard_derivatives : enable
+// Set the precision for data types used in this shader
+precision highp float;
+precision highp int;
 
+// Default THREE.js uniforms available to both fragment and vertex shader
+uniform mat4 modelMatrix;
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+uniform mat3 normalMatrix;
+
+// Default uniforms provided by ShaderFrog.
+uniform vec3 cameraPosition;
 uniform float time;
-uniform vec2 mouse;
-uniform vec2 resolution;
+
+// Default attributes provided by THREE.js. Attributes are only available in the
+// vertex shader. You can pass them to the fragment shader using varyings
+attribute vec3 position;
+attribute vec3 normal;
+attribute vec2 uv;
+attribute vec2 uv2;
+
+// Examples of variables passed from vertex to fragment shader
+varying vec3 vPosition;
+varying vec3 vNormal;
+varying vec2 vUv;
+varying vec2 vUv2;
 
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
@@ -33,7 +56,6 @@ float gradient(vec3 st) {
     vec3 i = floor(st);
     vec3 f = fract(st);
 
-    // Quintic
     vec3 u = f*f*f*(f*(f*6.-15.)+10.);
 
     return mix(mix(
@@ -58,31 +80,18 @@ float gradient_octaves(vec3 st) {
           //+0.0666667*gradient(8.*st*rot3);
 }
 
-void main( void ) {
+void main() {
 
-    float scale = 10.;
-    vec2 center = vec2(resolution.xy / 2.)*scale;
+    // To pass variables to the fragment shader, you assign them here in the
+    // main function. Traditionally you name the varying with vAttributeName
+    vNormal = normal;
+    vUv = uv;
+    vUv2 = uv2;
+    vPosition = position;
 
-    vec2 position = gl_FragCoord.xy / resolution.x * 2.;// / resolution.xy;
-
-    vec4 color = vec4(0., 0., 0., 0.);
-    float t = mod(time*0.15, 10000.);
-    float t2 = mod(time*0.025, 10000.);
-
-    float dist = distance(gl_FragCoord.xy*scale, center);
-    vec3 randposition = vec3(position * 5., t);
-    float value = 2.*pow(6.*pow(.5 + gradient_octaves(randposition)*.5, 6.), 2.);
-	if (dist < 100.*scale) {
-		value *= pow(dist/(100.*scale),10.) * scale;
-	}
-	else {
-		value *= ((150.*scale) / (dist - 1000.));
-		value *= pow((100.*scale)/dist, 10.);
-	}
-
-    vec3 color_dist = vec3(.7, .2, .15);
-    color.rgb = color_dist * vec3(value, value, value);
-
-    gl_FragColor = color;
+    // This sets the position of the vertex in 3d space. The correct math is
+    // provided below to take into account camera and object data.
+    float e = 1. * gradient_octaves(position) +  0.5 * gradient_octaves(2. * position) + 0.25 * gradient_octaves(vec3(4. * position.x, 2. * position.y, position.z));
+    gl_Position = projectionMatrix * modelViewMatrix * vec4( position+ normal* e, 1.0 );
 
 }

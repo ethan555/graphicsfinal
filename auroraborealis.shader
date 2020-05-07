@@ -29,6 +29,20 @@ vec3 random3(vec3 st){
     return -1.0 + 2.0*fract(sin(st)*43758.5453123);
 }
 
+float gradient2D(vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    vec2 u = f*f*f*(f*(f*6.-15.)+10.);
+    //y = f*f*(3.0-2.0*f);
+
+    return mix(
+        mix(dot(random2(i + vec2(0.,0.)), f - vec2(0.,0.)),
+            dot(random2(i + vec2(1.,0.)), f - vec2(1.,0.)), u.x),
+        mix(dot(random2(i + vec2(0.,1.)), f - vec2(0.,1.)),
+            dot(random2(i + vec2(1.,1.)), f - vec2(1.,1.)), u.x), u.y);
+}
+
 float gradient(vec3 st) {
     vec3 i = floor(st);
     vec3 f = fract(st);
@@ -59,29 +73,28 @@ float gradient_octaves(vec3 st) {
 }
 
 void main( void ) {
-
-    float scale = 10.;
-    vec2 center = vec2(resolution.xy / 2.)*scale;
-
-    vec2 position = gl_FragCoord.xy / resolution.x * 2.;// / resolution.xy;
+    vec2 position = gl_FragCoord.xy / resolution.y;// / resolution.xy;
 
     vec4 color = vec4(0., 0., 0., 0.);
     float t = mod(time*0.15, 10000.);
-    float t2 = mod(time*0.025, 10000.);
+    float t2 = mod(time*0.00001, 10000.);
+    float wave = gradient2D(vec2(position.x*.25,t2));
+    position.y += wave;
+    float value = (.5 + gradient_octaves(vec3(position.x*8., position.x*2.+position.y/6., t))*.5);
 
-    float dist = distance(gl_FragCoord.xy*scale, center);
-    vec3 randposition = vec3(position * 5., t);
-    float value = 2.*pow(6.*pow(.5 + gradient_octaves(randposition)*.5, 6.), 2.);
-	if (dist < 100.*scale) {
-		value *= pow(dist/(100.*scale),10.) * scale;
-	}
-	else {
-		value *= ((150.*scale) / (dist - 1000.));
-		value *= pow((100.*scale)/dist, 10.);
-	}
+    float ycheat = .95;
+    value = value*((pow(sin(ycheat+position.y*3.5)*.5+.5,10.))*.5 +
+		   (pow(sin(ycheat+position.y*1.5)*.5+.5,8.))*.5);
+    vec3 color_dist = vec3(0.1, .9, .5);
 
-    vec3 color_dist = vec3(.7, .2, .15);
-    color.rgb = color_dist * vec3(value, value, value);
+    float starvalue = 0.;
+    vec3 stars = vec3(0.);
+    vec3 starposition = vec3(position * 1000., t2);
+    starvalue = pow(.75 + gradient_octaves(starposition)*.5, 1.);
+    stars = mix(vec3(0.,0.,0.), vec3(1.,1.,1.), smoothstep(0.99, 1.0, vec3(starvalue)));
+    stars = clamp(stars, 0.0, 1.0);
+    color.rgb = color_dist * vec3(value, pow(value, 2.)*2., value) + stars;
+    color.a = value;
 
     gl_FragColor = color;
 

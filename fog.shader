@@ -51,37 +51,31 @@ const mat3 rot1 = mat3(-0.37, 0.36, 0.85,-0.14,-0.93, 0.34,0.92, 0.01,0.4);
 const mat3 rot2 = mat3(-0.55,-0.39, 0.74, 0.33,-0.91,-0.24,0.77, 0.12,0.63);
 const mat3 rot3 = mat3(-0.71, 0.52,-0.47,-0.08,-0.72,-0.68,-0.7,-0.45,0.56);
 
-float gradient_octaves(vec3 st) {
-    return 0.6*gradient(st)
-          +0.4*gradient(2.*st*rot1);
-          //+0.1333333*gradient(4.*st*rot2);
-          //+0.0666667*gradient(8.*st*rot3);
+float gradient_octaves(vec3 st, int octaves) {
+	/*float value = 0.;
+	for(int i=0; i<8; i++) {
+		if(i >= octaves) break;
+		value += (1./pow(2.,float(i+1)))*gradient(pow(2.,float(i))*st);
+	}
+	return value;*/
+    return 0.5*gradient(st)
+          +0.3*gradient(2.*st*rot1);
+          +0.1*gradient(4.*st*rot2);
+          +0.1*gradient(8.*st*rot3);
 }
 
 void main( void ) {
 
-    float scale = 10.;
-    vec2 center = vec2(resolution.xy / 2.)*scale;
-
-    vec2 position = gl_FragCoord.xy / resolution.x * 2.;// / resolution.xy;
+    vec2 position = gl_FragCoord.xy / resolution.xy;
 
     vec4 color = vec4(0., 0., 0., 0.);
-    float t = mod(time*0.15, 10000.);
-    float t2 = mod(time*0.025, 10000.);
+    float t = mod(time*0.05, 10000.);
+    vec3 randposition = vec3(position * 6., 0.);
+	randposition.x += t;
+    float value = .5 + gradient_octaves(randposition, 4)*.5;
 
-    float dist = distance(gl_FragCoord.xy*scale, center);
-    vec3 randposition = vec3(position * 5., t);
-    float value = 2.*pow(6.*pow(.5 + gradient_octaves(randposition)*.5, 6.), 2.);
-	if (dist < 100.*scale) {
-		value *= pow(dist/(100.*scale),10.) * scale;
-	}
-	else {
-		value *= ((150.*scale) / (dist - 1000.));
-		value *= pow((100.*scale)/dist, 10.);
-	}
-
-    vec3 color_dist = vec3(.7, .2, .15);
-    color.rgb = color_dist * vec3(value, value, value);
+    color = vec4(value);
+    color.w = 4.*pow(color.w, 4.);
 
     gl_FragColor = color;
 
