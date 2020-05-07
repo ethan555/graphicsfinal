@@ -77,17 +77,6 @@ float gradient_octaves(vec3 st) {
           //+0.0666667*gradient(8.*st*rot3);
 }
 
-float gradient_octaves2 (vec3 st) {
-    float value = 0.0;
-    float amplitude = 1.;
-    for (int i = 0; i < 6; i++) {
-        value += amplitude * gradient(st);
-        st *= 2.;
-        amplitude *= .4;
-    }
-    return value;
-}
-
 void main() {
     // world stuff from ShaderFrog
     vec3 worldPosition = ( modelMatrix * vec4( vPosition, 1.0 )).xyz;
@@ -100,43 +89,16 @@ void main() {
 	float value = 1.;
 	vec4 color = vec4(1., 0., 0., 1.);
 
-    // terrain coloring
+    // molten item
+    position *= 2.;
+    value = 2. * pow(9. * pow(.5 + gradient_octaves(vec3(position.x * 1.5, position.y * 1.5, position.z * 1.5 + t)) * .6, 6.), 1.7);
 
-    // elevation
-    float e = 1. * gradient_octaves(position) +  0.5 * gradient_octaves(2. * position) + 0.25 * gradient_octaves(vec3(4. * position.x, 2. * position.y, position.z));
-    e = clamp(e, -1., 1.);
+    // alternative slower & softer lava (good for tile item)
+    // position *= 1.5;
+    // t = mod(time*0.1, 10000.);
+    // value = 2. * pow(9.6 * pow(.5 + gradient_octaves(vec3(position.x * 1.5, position.y * 1.5, position.z * 1.5 + t)) * .6, 6.), 1.5);
 
-    // change random seed
-    position = vec3(position.zyx) * 4.;
-
-    // moisture
-    float m = gradient_octaves(position) +  0.5 * gradient_octaves(2. * position);
-    m = clamp(m, -1., 1.);
-
-    if (e < .0) // water
-        if (e < -.15) color = vec4(0., 0., .7, 1.); // deepest
-        else if (e < -.05) color = vec4(0., 0., .9, 1.); // deep
-        else color = vec4(0.2, 0.4, 1.5, 1.); // shallow
-
-    else  { // land
-        if (e > .23) { // mountain
-            if (m < -.02) color = vec4(1., 1., 1., 1.); // scorched
-            else if (m < 0.15) color = vec4(.9, 1., .9, 1.); // bare;
-            else color = vec4(.8, .9, .8, 1.); // tundra;
-        }
-        else if (e > .15)  { // hill
-            if (m < -.05) color = vec4(0.8, 1., 0.8, 1.);// TEMPERATE_DESERT
-            else if (m < 0.1) color = vec4(0.7, .9, 0.7, 1.);// SHRUBLAND
-            else color = vec4(0.4, .8, 0.4, 1.); // taiga
-        }
-        else if (e > .025) { // plains
-            if (m < -0.06)  color = vec4(0.5, .9, 0.5, 1.); //  TEMPERATE_DESERT
-            else if (m < 0.05) color = vec4(0.3, .8, 0.3, 1.); // GRASSLAND
-            else if (m < 0.2) color = vec4(0.3, .7, 0.3, 1.); //  TEMPERATE_DECIDUOUS_FOREST
-            else color = vec4(0.2, .6, 0.3, 1.); // TEMPERATE_RAIN_FOREST
-        }
-        else color = vec4(.9, .85, 0.6, 1.); // beach
-    }
+    color.rgb = vec3(10. * value, .84 * value, .5 * value);
 
     gl_FragColor = color;//vec4( color * brightness);
 

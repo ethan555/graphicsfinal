@@ -100,44 +100,11 @@ void main() {
 	float value = 1.;
 	vec4 color = vec4(1., 0., 0., 1.);
 
-    // terrain coloring
-
-    // elevation
-    float e = 1. * gradient_octaves(position) +  0.5 * gradient_octaves(2. * position) + 0.25 * gradient_octaves(vec3(4. * position.x, 2. * position.y, position.z));
-    e = clamp(e, -1., 1.);
-
-    // change random seed
-    position = vec3(position.zyx) * 4.;
-
-    // moisture
-    float m = gradient_octaves(position) +  0.5 * gradient_octaves(2. * position);
-    m = clamp(m, -1., 1.);
-
-    if (e < .0) // water
-        if (e < -.15) color = vec4(0., 0., .7, 1.); // deepest
-        else if (e < -.05) color = vec4(0., 0., .9, 1.); // deep
-        else color = vec4(0.2, 0.4, 1.5, 1.); // shallow
-
-    else  { // land
-        if (e > .23) { // mountain
-            if (m < -.02) color = vec4(1., 1., 1., 1.); // scorched
-            else if (m < 0.15) color = vec4(.9, 1., .9, 1.); // bare;
-            else color = vec4(.8, .9, .8, 1.); // tundra;
-        }
-        else if (e > .15)  { // hill
-            if (m < -.05) color = vec4(0.8, 1., 0.8, 1.);// TEMPERATE_DESERT
-            else if (m < 0.1) color = vec4(0.7, .9, 0.7, 1.);// SHRUBLAND
-            else color = vec4(0.4, .8, 0.4, 1.); // taiga
-        }
-        else if (e > .025) { // plains
-            if (m < -0.06)  color = vec4(0.5, .9, 0.5, 1.); //  TEMPERATE_DESERT
-            else if (m < 0.05) color = vec4(0.3, .8, 0.3, 1.); // GRASSLAND
-            else if (m < 0.2) color = vec4(0.3, .7, 0.3, 1.); //  TEMPERATE_DECIDUOUS_FOREST
-            else color = vec4(0.2, .6, 0.3, 1.); // TEMPERATE_RAIN_FOREST
-        }
-        else color = vec4(.9, .85, 0.6, 1.); // beach
-    }
-
+    // metallic
+    t = mod(time * 0.2, 10000.);
+    value = 6. * pow(4. * pow(.5 + gradient_octaves(vec3(worldNormal.x + t, worldNormal.y, worldNormal.z))*.5, 6.), 2.);
+    color.rgb = vec3(6.6 * value, .5 * value, 4.5 * value);
+    
     gl_FragColor = color;//vec4( color * brightness);
 
 }
