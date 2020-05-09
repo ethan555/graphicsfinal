@@ -79,6 +79,7 @@ void main( void ) {
     float t = mod(time*0.15, 10000.);
     float t2 = mod(time*0.00001, 10000.);
     float wave = gradient2D(vec2(position.x*.25,t2));
+    vec3 starposition = vec3(position * 1000., t2);
     position.y += wave;
     float value = (.5 + gradient_octaves(vec3(position.x*8., position.x*2.+position.y/6., t))*.5);
 
@@ -89,7 +90,6 @@ void main( void ) {
 
     float starvalue = 0.;
     vec3 stars = vec3(0.);
-    vec3 starposition = vec3(position * 1000., t2);
     starvalue = pow(.75 + gradient_octaves(starposition)*.5, 1.);
     stars = mix(vec3(0.,0.,0.), vec3(1.,1.,1.), smoothstep(0.99, 1.0, vec3(starvalue)));
     stars = clamp(stars, 0.0, 1.0);
