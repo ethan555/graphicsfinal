@@ -1,40 +1,16 @@
 R"zzz(
 #version 330 core
-/**
-* ShaderFrog Fragment Shader
-*/
-
-/*// Set the precision for data types used in this shader
-precision highp float;
-precision highp int;
-
-// Default THREE.js uniforms available to both fragment and vertex shader
-uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-uniform mat4 viewMatrix;
-uniform mat3 normalMatrix;
-
-// Default uniforms provided by ShaderFrog.
-uniform vec3 cameraPosition;
-// uniform float time;
-
-// A uniform unique to this shader. You can modify it to the using the form
-// below the shader preview. Any uniform you add is automatically given a form
-uniform vec3 color;
-uniform vec3 lightPosition;
-
-// Example varyings passed from the vertex shader
-varying vec3 vPosition;
-varying vec3 vNormal;
-varying vec2 vUv;
-varying vec2 vUv2;*/
 
 in vec4 normal;
 in vec4 light_direction;
 in vec4 color_normal;
 in vec4 world_position;
 in float yscale;
+in float water_y;
+in float is_water;
+
+uniform float mouse_dx;
+uniform float original_shader;
 
 out vec4 fragment_color;
 
@@ -98,6 +74,45 @@ float gradient_octaves2 (vec3 st) {
     return value;
 }
 
+vec4 getWater (vec3 position) {
+    //vornoi water
+    vec4 color = vec4(0.5, 0.1, 0., 1.);
+    //position *= .05;
+    float contrast = .1;
+    float dist = (position.y - water_y)*2.+.5;// * 10.;
+
+    // draw the min distance
+    color += dist;
+    color += gradient_octaves(position);
+
+    // invert colors
+    color = vec4(1. - color.r, 1. - color.g, 1. - color.b, 1.);
+    color.g += .4;
+
+    // contrast.
+    contrast = .5;
+    color.rgb = ((color.rgb - 0.5) * max(contrast, 0.)) + .5;
+
+    // lightness.
+    float lightness = .3;
+    color.rgb += lightness;
+
+    // almost saturation
+    vec3 blue = vec3(0.,0.,1.);
+    float saturation = .75;
+    color.rgb = mix(blue, color.rgb, saturation);
+
+    // contrast again
+    contrast = 1.2;
+    color.rgb = ((color.rgb - 0.5) * max(contrast, 0.)) + .5;
+
+    // color again
+    color -= 1.-dist;
+    color.a = 1.;
+
+    return color;
+}
+
 void main() {
     // world stuff from ShaderFrog
     vec3 worldPosition = world_position.xyz;
@@ -113,8 +128,7 @@ void main() {
     position *= .05;
 
     // elevation
-    float e = position.y / .75;  //1. * gradient_octaves(position) +  0.5 * gradient_octaves(2. * position) + 0.25 * gradient_octaves(vec3(4. * position.x, 2. * position.y, position.z));
-    // e = clamp(e, -1., 1.);
+    float e = position.y / .75;
 
     // change random seed
     position = vec3(position.zyx) * 4.;
@@ -123,10 +137,29 @@ void main() {
     float m = gradient_octaves(position) +  0.5 * gradient_octaves(2. * position);
     m = clamp(m, -1., 1.);
 
-    if (e < .0) // water
-        if (e < -.15) color = vec4(0., 0., .7, 1.); // deepest
-        else if (e < -.05) color = vec4(0., 0., .9, 1.); // deep
-        else color = vec4(0.2, 0.4, 1.5, 1.); // shallow
+    if (is_water > 0.) { // water
+        color = getWater(position);
+        if (original_shader != 1.0) {
+            vec3 color_dist = color.xyz;//vec3(0.1, .9, .5);
+            vec3 color_dist2 = color_dist.yzx;
+            vec3 color_dist3 = color_dist.zxy;
+
+            vec3 values = vec3(value);//, pow(value, 2.)*2., value);
+            vec4 color1 = vec4(color_dist * values, value);
+            vec4 color2 = vec4(color_dist2 * values.yzx, value);
+            vec4 color3 = vec4(color_dist3 * values.zxy, value);
+            //color.a = value;
+
+            if (mouse_dx < .5) {
+                color.xyz = mix(color1.xyz, color2.xyz, mouse_dx*2.);// + stars;
+            } else {
+                color.xyz = mix(color2.xyz, color3.xyz, (mouse_dx - .5)*2.);// + stars;
+            }
+        }
+        // if (e < -.15) color = vec4(0., 0., .7, 1.); // deepest
+        // else if (e < -.05) color = vec4(0., 0., .9, 1.); // deep
+        // else color = vec4(0.2, 0.4, 1.5, 1.); // shallow
+    }
 
     else  { // land
         if (e > .23) { // mountain
@@ -147,10 +180,6 @@ void main() {
         }
         else color = vec4(.9, .85, 0.6, 1.); // beach
     }
-
-    /*if (e < .001 && e > -.001) color = vec4(0., 0., 1., e); // blue e = 0
-    else if (e < 0.) color = vec4(0., 1., 0., e); // green e = negative
-    else color = vec4(1., 0., .0, e); // red e = positive*/
 
     fragment_color = color;//vec4( color * brightness);
 

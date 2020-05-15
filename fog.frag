@@ -1,17 +1,12 @@
-R"zzz(
-#version 330 core
-in vec4 normal;
-in vec4 light_direction;
-in vec4 color_normal;
-in vec4 world_position;
+#ifdef GL_ES
+precision mediump float;
+#endif
 
-out vec4 fragment_color;
+#extension GL_OES_standard_derivatives : enable
 
 uniform float time;
+uniform vec2 mouse;
 uniform vec2 resolution;
-uniform float mouse_dx;
-uniform float mouse_dy;
-uniform float original_shader;
 
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
@@ -38,6 +33,7 @@ float gradient(vec3 st) {
     vec3 i = floor(st);
     vec3 f = fract(st);
 
+    // Quintic
     vec3 u = f*f*f*(f*(f*6.-15.)+10.);
 
     return mix(mix(
@@ -55,33 +51,32 @@ const mat3 rot1 = mat3(-0.37, 0.36, 0.85,-0.14,-0.93, 0.34,0.92, 0.01,0.4);
 const mat3 rot2 = mat3(-0.55,-0.39, 0.74, 0.33,-0.91,-0.24,0.77, 0.12,0.63);
 const mat3 rot3 = mat3(-0.71, 0.52,-0.47,-0.08,-0.72,-0.68,-0.7,-0.45,0.56);
 
-float gradient_octaves(vec3 st) {
-    return 0.6*gradient(st)
-          +0.4*gradient(2.*st*rot1);
-          //+0.1333333*gradient(4.*st*rot2);
-          //+0.0666667*gradient(8.*st*rot3);
+float gradient_octaves(vec3 st, int octaves) {
+	/*float value = 0.;
+	for(int i=0; i<8; i++) {
+		if(i >= octaves) break;
+		value += (1./pow(2.,float(i+1)))*gradient(pow(2.,float(i))*st);
+	}
+	return value;*/
+    return 0.5*gradient(st)
+          +0.3*gradient(2.*st*rot1);
+          +0.1*gradient(4.*st*rot2);
+          +0.1*gradient(8.*st*rot3);
 }
 
-void main() {
-    vec3 position = vec3(world_position.x, world_position.y, world_position.z);
-    float t = mod(time*0.2, 10000.);
-    float value = 1.;
-    vec4 color = vec4(1.);
+void main( void ) {
 
-    // molten lava
-    position *= .15;
-    value = 2. * pow(9. * pow(.5 + gradient_octaves(vec3(position.x * 1.5, position.y * 1.5+t, position.z * 1.5)) * .6, 6.), 1.7);
-    color.rgb = vec3(10. * value, .84 * value, .5 * value);
+    vec2 position = gl_FragCoord.xy / resolution.xy;
 
-    // glow
-    float t2 = abs(sin(mod(time *1., 1000.)));
-    vec3 yellow = vec3(1.,.5,0.);
-    float saturation = .8;
-    vec3 yellowglow = mix(yellow, color.rgb, saturation);
-    vec3 contrast = ((color.rgb - 0.5) * max(1., 0.)) + .5;
-    color.rgb += (yellowglow+contrast) * t2;
+    vec4 color = vec4(0., 0., 0., 0.);
+    float t = mod(time*0.05, 10000.);
+    vec3 randposition = vec3(position * 6., 0.);
+	randposition.x += t;
+    float value = .5 + gradient_octaves(randposition, 4)*.5;
 
-    gl_FragColor = color;//vec4( color * brightness);
+    color = vec4(value);
+    color.w = 4.*pow(color.w, 4.);
+
+    gl_FragColor = color;
 
 }
-)zzz"

@@ -1,31 +1,10 @@
 R"zzz(
 #version 330 core
-// Set the precision for data types used in this shader
-// precision highp float;
-// precision highp int;
+// #ifdef GL_ES
+// precision mediump float;
+// #endif
 
-// Default THREE.js uniforms available to both fragment and vertex shader
-// uniform mat4 modelMatrix;
-// uniform mat4 ;
-// uniform mat4 projectionMatrix;
-// uniform mat4 viewMatrix;
-// uniform mat3 normalMatrix;
-
-// Default uniforms provided by ShaderFrog.
-// uniform vec3 cameraPosition;
-// uniform float time;
-
-// A uniform unique to this shader. You can modify it to the using the form
-// below the shader preview. Any uniform you add is automatically given a form
-// uniform vec3 color;
-// uniform vec3 lightPosition;
-
-// Example varyings passed from the vertex shader
-// varying vec3 vPosition;
-// varying vec3 vNormal;
-// varying vec2 vUv;
-// varying vec2 vUv2;
-
+// #extension GL_OES_standard_derivatives : enable
 in vec4 normal;
 in vec4 light_direction;
 in vec4 color_normal;
@@ -34,6 +13,7 @@ in vec4 world_position;
 out vec4 fragment_color;
 
 uniform float time;
+uniform vec2 mouse;
 uniform vec2 resolution;
 uniform float mouse_dx;
 uniform float mouse_dy;
@@ -64,6 +44,7 @@ float gradient(vec3 st) {
     vec3 i = floor(st);
     vec3 f = fract(st);
 
+    // Quintic
     vec3 u = f*f*f*(f*(f*6.-15.)+10.);
 
     return mix(mix(
@@ -88,34 +69,38 @@ float gradient_octaves(vec3 st) {
           //+0.0666667*gradient(8.*st*rot3);
 }
 
-float gradient_octaves2 (vec3 st) {
-    float value = 0.0;
-    float amplitude = 1.;
-    for (int i = 0; i < 6; i++) {
-        value += amplitude * gradient(st);
-        st *= 2.;
-        amplitude *= .4;
+void main( void ) {
+    //vec2 position = gl_FragCoord.xy / resolution.x * 5.;// / resolution.xy;
+    float mouse_x;
+    float mouse_y;
+    if (original_shader > 0.) {
+        mouse_x = 0.;
+        mouse_y = 0.;
+    } else {
+        mouse_x = mouse_dx;
+        mouse_y = mouse_dy;
     }
-    return value;
-}
+    vec2 position = ( world_position.xz ) / (resolution.x * (mouse_y /2. + .5));
 
-void main() {
-    // world stuff from ShaderFrog
-    // vec3 worldPosition = ( modelMatrix * vec4( vPosition, 1.0 )).xyz;
-    // vec3 worldNormal = normalize( vec3( modelMatrix * vec4( vNormal, 0.0 ) ) );
-    // vec3 lightVector = normalize( lightPosition - worldPosition );
-    // float brightness = dot( worldNormal, lightVector );
+    vec4 color = vec4(0., 0., 0., 0.);
+    float t = mod(time*0.15, 10000.);
 
-    vec3 position = vec3(world_position.xyz);
-	float t = mod(time*0.2, 10000.);
-	float value = 1.;
-	vec4 color = vec4(1., 0., 0., 1.);
+    float value = 2.*pow(6.*pow(.5 + gradient_octaves(vec3(position.x+position.y/2., position.x+position.y/2., t))*.5, 6.), 2.);
+    vec3 color_dist = vec3(1., .84, .5);
+    vec3 color_dist2 = color_dist.yzx;
+    vec3 color_dist3 = color_dist.zxy;
+    color.a = value;
 
-    // enchanted item
-    position *= .075;
-	t = mod(time * .7, 10000.) * .1;
-    value = 5. * pow(.2 * pow(.5 + gradient_octaves2(vec3(position.x + t, position.y + t, position.z+ t)), 1.5), 1.5);
-    color.rgb = vec3(0.6 * value, .5 * value, 1.8 * value);
+    vec3 color1 = color_dist * vec3(value);
+    vec3 color2 = color_dist2 * vec3(value);
+    vec3 color3 = color_dist3 * vec3(value);
+
+    if (mouse_x < .5) {
+        color.xyz = mix(color1.xyz, color2.xyz, mouse_x);
+    } else {
+        color.xyz = mix(color2.xyz, color3.xyz, (mouse_x - .5));
+    }
+    //color.rgb = color_dist * vec3(value);
 
     fragment_color = color;
 

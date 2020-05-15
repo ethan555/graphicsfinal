@@ -1,17 +1,12 @@
-R"zzz(
-#version 330 core
-in vec4 normal;
-in vec4 light_direction;
-in vec4 color_normal;
-in vec4 world_position;
+#ifdef GL_ES
+precision mediump float;
+#endif
 
-out vec4 fragment_color;
+#extension GL_OES_standard_derivatives : enable
 
 uniform float time;
+uniform vec2 mouse;
 uniform vec2 resolution;
-uniform float mouse_dx;
-uniform float mouse_dy;
-uniform float original_shader;
 
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
@@ -38,6 +33,7 @@ float gradient(vec3 st) {
     vec3 i = floor(st);
     vec3 f = fract(st);
 
+    // Quintic
     vec3 u = f*f*f*(f*(f*6.-15.)+10.);
 
     return mix(mix(
@@ -62,26 +58,31 @@ float gradient_octaves(vec3 st) {
           //+0.0666667*gradient(8.*st*rot3);
 }
 
-void main() {
-    vec3 position = vec3(world_position.x, world_position.y, world_position.z);
-    float t = mod(time*0.2, 10000.);
-    float value = 1.;
-    vec4 color = vec4(1.);
+void main( void ) {
 
-    // molten lava
-    position *= .15;
-    value = 2. * pow(9. * pow(.5 + gradient_octaves(vec3(position.x * 1.5, position.y * 1.5+t, position.z * 1.5)) * .6, 6.), 1.7);
-    color.rgb = vec3(10. * value, .84 * value, .5 * value);
+    float scale = 10.;
+    vec2 center = vec2(resolution.xy / 2.)*scale;
 
-    // glow
-    float t2 = abs(sin(mod(time *1., 1000.)));
-    vec3 yellow = vec3(1.,.5,0.);
-    float saturation = .8;
-    vec3 yellowglow = mix(yellow, color.rgb, saturation);
-    vec3 contrast = ((color.rgb - 0.5) * max(1., 0.)) + .5;
-    color.rgb += (yellowglow+contrast) * t2;
+    vec2 position = gl_FragCoord.xy / resolution.x * 2.;// / resolution.xy;
 
-    gl_FragColor = color;//vec4( color * brightness);
+    vec4 color = vec4(0., 0., 0., 0.);
+    float t = mod(time*0.15, 10000.);
+    float t2 = mod(time*0.025, 10000.);
+
+    float dist = distance(gl_FragCoord.xy*scale, center);
+    vec3 randposition = vec3(position * 5., t);
+    float value = 2.*pow(6.*pow(.5 + gradient_octaves(randposition)*.5, 6.), 2.);
+	if (dist < 100.*scale) {
+		value *= pow(dist/(100.*scale),10.) * scale;
+	}
+	else {
+		value *= ((150.*scale) / (dist - 1000.));
+		value *= pow((100.*scale)/dist, 10.);
+	}
+
+    vec3 color_dist = vec3(.7, .2, .15);
+    color.rgb = color_dist * vec3(value, value, value);
+
+    gl_FragColor = color;
 
 }
-)zzz"

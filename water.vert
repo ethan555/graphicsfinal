@@ -1,17 +1,20 @@
 R"zzz(
 #version 330 core
-in vec4 normal;
-in vec4 light_direction;
-in vec4 color_normal;
-in vec4 world_position;
 
-out vec4 fragment_color;
+in vec4 vertex_position;
+in vec4 vertex_normal;
 
 uniform float time;
-uniform vec2 resolution;
-uniform float mouse_dx;
+uniform mat4 view;
+uniform mat4 projection;
+uniform vec4 light_position;
 uniform float mouse_dy;
 uniform float original_shader;
+
+out vec4 light_direction;
+out vec4 normal;
+out vec4 world_position;
+out vec4 color_normal;
 
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
@@ -62,26 +65,47 @@ float gradient_octaves(vec3 st) {
           //+0.0666667*gradient(8.*st*rot3);
 }
 
+float minDist(vec3 position, float t) {
+    vec3 edge = floor(position);
+    vec3 center = fract(position);
+    float minDist = 1.;
+
+    // loop through all the neighbors
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int z = -1; z <= 1; z++) {
+                vec3 neighbor = vec3(float(x), float(y), float(z));
+                vec3 border = random3(edge + neighbor);
+                border = 0.5 + 0.5*sin(t + 6.2831*border);
+                vec3 diff = neighbor + border - center;
+                minDist = min(minDist, length(diff));
+            }
+        }
+    }
+    return minDist;
+}
+
 void main() {
-    vec3 position = vec3(world_position.x, world_position.y, world_position.z);
-    float t = mod(time*0.2, 10000.);
-    float value = 1.;
-    vec4 color = vec4(1.);
 
-    // molten lava
-    position *= .15;
-    value = 2. * pow(9. * pow(.5 + gradient_octaves(vec3(position.x * 1.5, position.y * 1.5+t, position.z * 1.5)) * .6, 6.), 1.7);
-    color.rgb = vec3(10. * value, .84 * value, .5 * value);
+    // To pass variables to the fragment shader, you assign them here in the
+    // main function. Traditionally you name the varying with vAttributeName
+    normal = vertex_normal;
+    //vUv = uv;
+    //vUv2 = uv2;
+    world_position = vertex_position;
+    light_direction = light_position - vertex_position;
 
-    // glow
-    float t2 = abs(sin(mod(time *1., 1000.)));
-    vec3 yellow = vec3(1.,.5,0.);
-    float saturation = .8;
-    vec3 yellowglow = mix(yellow, color.rgb, saturation);
-    vec3 contrast = ((color.rgb - 0.5) * max(1., 0.)) + .5;
-    color.rgb += (yellowglow+contrast) * t2;
-
-    gl_FragColor = color;//vec4( color * brightness);
-
+    // water waves
+    float t = mod(time*0.2, 10000.) * 1.5;
+    float dist = minDist(world_position.xyz * .05, t);
+    if (original_shader != 1.) {
+        float mouse_y = (mouse_dy + .5) * 2.5;//1.25;
+        gl_Position = projection * view * vec4( world_position.xyz + normal.xyz * dist * 1.5 * mouse_y, 1.0 );
+        world_position.y = dist * mouse_y * .5;
+    }
+    else {
+        gl_Position = projection * view * vec4( world_position.xyz + normal.xyz * dist * 1.5, 1.0 );
+        world_position.y = dist;
+    }
 }
 )zzz"

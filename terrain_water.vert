@@ -4,11 +4,10 @@ R"zzz(
 in vec4 vertex_position;
 in vec4 vertex_normal;
 
+uniform float time;
 uniform mat4 view;
 uniform mat4 projection;
 uniform vec4 light_position;
-uniform vec2 resolution;
-uniform float mouse_dx;
 uniform float mouse_dy;
 uniform float original_shader;
 
@@ -17,6 +16,8 @@ out vec4 normal;
 out vec4 world_position;
 out vec4 color_normal;
 out float yscale;
+out float water_y;
+out float is_water;
 
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
@@ -67,11 +68,33 @@ float gradient_octaves(vec3 st) {
           //+0.0666667*gradient(8.*st*rot3);
 }
 
+float minDist(vec3 position, float t) {
+    vec3 edge = floor(position);
+    vec3 center = fract(position);
+    float minDist = 1.;
+
+    // loop through all the neighbors
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int z = -1; z <= 1; z++) {
+                vec3 neighbor = vec3(float(x), float(y), float(z));
+                vec3 border = random3(edge + neighbor);
+                border = 0.5 + 0.5*sin(t + 6.2831*border);
+                vec3 diff = neighbor + border - center;
+                minDist = min(minDist, length(diff));
+            }
+        }
+    }
+    return minDist;
+}
+
 void main() {
 
     // To pass variables to the fragment shader, you assign them here in the
     // main function. Traditionally you name the varying with vAttributeName
     normal = vertex_normal;
+    //vUv = uv;
+    //vUv2 = uv2;
     world_position = vertex_position;
     light_direction = light_position - vertex_position;
 
@@ -79,17 +102,27 @@ void main() {
     // provided below to take into account camera and object data.
     vec3 position = vertex_position.xyz;// * .05;
     float scale = .05;
-    if (original_shader == 0.) {
-        scale = mouse_dx*.09+.01;
-    }
     float e = 1. * gradient_octaves(position * scale) +  0.5 * gradient_octaves(2. * position * scale) + 0.25 * gradient_octaves(vec3(4. * position.x * scale, 2. * position.y * scale, position.z * scale));
     /*if (e == 0.) world_position.y = 0.;
     else if (e > 0.) world_position.y = 10.;
     else world_position.y = -10.;*/
     float mouse_y = 1.;
     if (original_shader != 1.) mouse_y = (mouse_dy + .5) * 1.25;
-    yscale = 10.*mouse_y;
-    world_position.y = e*yscale;
+    yscale = 10. * mouse_y;
+    water_y = -.1;
+    if (e <= water_y) {
+        // WATER
+        float t = mod(time*0.2, 10000.) * 1.5;
+        float dist = minDist(world_position.xyz * .1, t);
+        if (original_shader != 1.) mouse_y = (mouse_dy + .5) * 1.5;
+        world_position.y = water_y + (dist - .5) * mouse_y;// * .5;
+        is_water = 1.;
+        gl_Position = projection * view * vec4( world_position.xyz, 1.0 );
+    } else {
+        // LAND
+        is_water = 0.;
+        world_position.y = max(water_y, e*yscale);
+    }
     gl_Position = projection * view * vec4(world_position.xyz, 1.0);
 
 }
