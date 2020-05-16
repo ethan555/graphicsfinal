@@ -112,10 +112,32 @@ void main() {
 	vec4 color = vec4(1., 0., 0., 1.);
 
     // enchanted item
-    position *= .075;
+    float scale = .075;
+    if (original_shader == 0.) {
+        scale = mouse_dy*.2+.05;
+    }
+    position *= scale;
 	t = mod(time * .7, 10000.) * .1;
     value = 5. * pow(.2 * pow(.5 + gradient_octaves2(vec3(position.x + t, position.y + t, position.z+ t)), 1.5), 1.5);
     color.rgb = vec3(0.6 * value, .5 * value, 1.8 * value);
+
+    if (original_shader == 0.) {
+        vec3 color_dist = color.xyz;//vec3(0.1, .9, .5);
+        vec3 color_dist2 = color_dist.yzx;
+        vec3 color_dist3 = color_dist.zxy;
+
+        vec3 values = vec3(value);//, pow(value, 2.)*2., value);
+        vec4 color1 = vec4(color_dist * values, value);
+        vec4 color2 = vec4(color_dist2 * values.yzx, value);
+        vec4 color3 = vec4(color_dist3 * values.zxy, value);
+        //color.a = value;
+
+        if (mouse_dx < .5) {
+            color.xyz = mix(color1.xyz, color2.xyz, mouse_dx*2.);// + stars;
+        } else {
+            color.xyz = mix(color2.xyz, color3.xyz, (mouse_dx - .5)*2.);// + stars;
+        }
+    }
 
     fragment_color = color;
 

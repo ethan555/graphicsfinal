@@ -110,7 +110,11 @@ void main() {
 
     //vornoi ice
     color = vec4(0.5, 0.1, 0., 1.);
-    position *= .1;
+    float scale = .1;
+    if (original_shader == 0.) {
+        scale = mouse_dy*.25+.05;
+    }
+    position *= scale;
     float contrast = .1;
 
     float dist = minDist(position, t*.25);
@@ -153,6 +157,24 @@ void main() {
 
     //color.rgb = vec3(.5);
     color.rgb += getStars(position, t*.5);
+
+    if (original_shader == 0.) {
+        vec3 color_dist = color.xyz;//vec3(0.1, .9, .5);
+        vec3 color_dist2 = color_dist.yzx;
+        vec3 color_dist3 = color_dist.zxy;
+
+        vec3 values = vec3(value);//, pow(value, 2.)*2., value);
+        vec4 color1 = vec4(color_dist * values, value);
+        vec4 color2 = vec4(color_dist2 * values.yzx, value);
+        vec4 color3 = vec4(color_dist3 * values.zxy, value);
+        //color.a = value;
+
+        if (mouse_dx < .5) {
+            color.xyz = mix(color1.xyz, color2.xyz, mouse_dx*2.);// + stars;
+        } else {
+            color.xyz = mix(color2.xyz, color3.xyz, (mouse_dx - .5)*2.);// + stars;
+        }
+    }
 
     fragment_color = color;//vec4( color * brightness);
 }

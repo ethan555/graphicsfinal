@@ -69,7 +69,17 @@ void main() {
     vec4 color = vec4(1.);
 
     // molten lava
-    position *= .15;
+    float scale = .15;
+    if (original_shader == 0.) {
+        scale = mouse_dy * .25+.1;
+    }
+    position *= scale;
+
+    scale = 1.;
+    if (original_shader == 0.) {
+        scale = mouse_dx * 2.5+.5;
+    }
+    t *= scale;
     value = 2. * pow(9. * pow(.5 + gradient_octaves(vec3(position.x * 1.5, position.y * 1.5+t, position.z * 1.5)) * .6, 6.), 1.7);
     color.rgb = vec3(10. * value, .84 * value, .5 * value);
 

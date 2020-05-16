@@ -9,6 +9,7 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform vec4 light_position;
 uniform float mouse_dy;
+uniform float mouse_dx;
 uniform float original_shader;
 
 out vec4 light_direction;
@@ -102,6 +103,9 @@ void main() {
     // provided below to take into account camera and object data.
     vec3 position = vertex_position.xyz;// * .05;
     float scale = .05;
+    if (original_shader == 0.) {
+        scale = mouse_dx*.09+.01;
+    }
     float e = 1. * gradient_octaves(position * scale) +  0.5 * gradient_octaves(2. * position * scale) + 0.25 * gradient_octaves(vec3(4. * position.x * scale, 2. * position.y * scale, position.z * scale));
     /*if (e == 0.) world_position.y = 0.;
     else if (e > 0.) world_position.y = 10.;
@@ -109,7 +113,7 @@ void main() {
     float mouse_y = 1.;
     if (original_shader != 1.) mouse_y = (mouse_dy + .5) * 1.25;
     yscale = 10. * mouse_y;
-    water_y = -.1;
+    water_y = -.03;
     if (e <= water_y) {
         // WATER
         float t = mod(time*0.2, 10000.) * 1.5;
